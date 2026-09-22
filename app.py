@@ -46,9 +46,8 @@ if st.sidebar.button("Analiz Et ve Görselleştir"):
         prediction = model.predict(features)[0]
         prob = model.predict_proba(features)[0]
 
-        # Beklenen miktar / değişim oranı tahmini (Son dönem ortalama getirisi bazlı yaklaşım)
-        recent_return = df_history['Close'].pct_change().tail(10).mean() * 100
-        expected_change_rate = recent_return if prediction == 1 else -abs(recent_return)
+        # Geçmiş getiri özeti; modelin gelecek fiyat değişimi tahmini değildir.
+        recent_avg_return = df_history['Close'].pct_change().tail(10).mean() * 100
 
         # Üst Metrikler (4 Sütun)
         col1, col2, col3, col4 = st.columns(4)
@@ -61,7 +60,8 @@ if st.sidebar.button("Analiz Et ve Görselleştir"):
             col3.metric("Model Yön Tahmini", "📉 DÜŞÜŞ / NÖTR (0)", delta=f"-%{prob[0] * 100:.1f} Olasılık",
                         delta_color="inverse")
 
-        col4.metric("Beklenen Değişim Eğilimi", f"%{expected_change_rate:.2f}", delta="Trend Bazlı Tahmin")
+        col4.metric("Son 10 İşlem Dönemi Ort. Günlük Getiri", f"%{recent_avg_return:.2f}",
+                    help="Geçmiş getirilerin aritmetik ortalamasıdır; gelecek getiri tahmini değildir.")
 
         st.divider()
 
@@ -79,7 +79,7 @@ if st.sidebar.button("Analiz Et ve Görselleştir"):
             "SMA_50": round(df_last['SMA_50'].values[0], 2),
             "RSI": round(df_last['RSI'].values[0], 2),
             "Yükseliş Olasılığı": f"%{prob[1] * 100:.2f}",
-            "Tahmini Fiyat Değişim Oranı": f"%{expected_change_rate:.2f}"
+            "Son 10 İşlem Dönemi Ortalama Günlük Getiri": f"%{recent_avg_return:.2f}"
         })
     else:
         st.warning(f"'{symbol}' için veritabanında veri bulunamadı. Lütfen önce `data_pipeline.py` çalıştırın.")

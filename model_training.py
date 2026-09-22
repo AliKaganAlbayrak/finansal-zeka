@@ -12,13 +12,24 @@ def train_model():
 
     # Yeni Özellik Kümemiz (Features)
     feature_cols = ['SMA_20', 'SMA_50', 'RSI', 'MACD', 'MACD_Signal', 'Daily_Return']
-    X = df[feature_cols]
-    y = df['Target']
+    # Yerel işlem gününü koru; farklı piyasalar için ortak tarih sınırı kullan.
+    df['Trade_Date'] = pd.to_datetime(df['Date'].str[:10], format='%Y-%m-%d')
+    df = df.sort_values(['Symbol', 'Trade_Date'])
+    df['Target_Date'] = df.groupby('Symbol')['Trade_Date'].shift(-1)
+    # Eski veritabanındaki son satırlar 0 olsa bile eğitim/test dışında kalır.
+    df = df.dropna(subset=feature_cols + ['Target', 'Target_Date'])
+    dates = df['Trade_Date'].sort_values().unique()
+    if len(dates) < 2:
+        raise ValueError('Eğitim/test ayrımı için yeterli etiketli işlem günü yok.')
+    test_start = dates[int(len(dates) * 0.8)]
 
-    # Zaman serisi yapısına uygun olarak veriyi bölme (Son %20 test verisi)
-    split_idx = int(len(df) * 0.8)
-    X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
-    y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    # Test dönemindeki fiyatla etiketlenen sınır satırlarını eğitimden çıkar.
+    train_df = df[(df['Trade_Date'] < test_start) & (df['Target_Date'] < test_start)]
+    test_df = df[df['Trade_Date'] >= test_start]
+    if train_df.empty or test_df.empty:
+        raise ValueError('Tarih ayrımından sonra eğitim veya test kümesi boş kaldı.')
+    X_train, X_test = train_df[feature_cols], test_df[feature_cols]
+    y_train, y_test = train_df['Target'].astype(int), test_df['Target'].astype(int)
 
     # Model Tanımlama ve Eğitme
     # class_weight='balanced' ile sınıf dengesizliğini önüne geçiyoruz

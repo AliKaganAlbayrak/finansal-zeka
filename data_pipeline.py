@@ -28,9 +28,12 @@ def calculate_indicators(df):
     df['Daily_Return'] = df['Close'].pct_change()
 
     # Target (Hedef Değişken)
-    df['Target'] = (df['Close'].shift(-1) > df['Close'] * 1.005).astype(int)
+    next_close = df['Close'].shift(-1)
+    df['Target'] = (next_close > df['Close'] * 1.005).astype('Int64').where(next_close.notna())
 
-    return df.dropna().copy()
+    # Son satır tahmin için korunur; henüz bilinmeyen hedefi NULL olarak saklanır.
+    feature_cols = ['SMA_20', 'SMA_50', 'RSI', 'MACD', 'MACD_Signal', 'Daily_Return']
+    return df.dropna(subset=['Close'] + feature_cols).copy()
 
 
 def fetch_and_save_data():
